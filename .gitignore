@@ -1,0 +1,10 @@
+
+*.pyc
+dist/
+*.egg-info
+.*.swp
+*.zip
+*.gz
+*.bz2
+*~
+
