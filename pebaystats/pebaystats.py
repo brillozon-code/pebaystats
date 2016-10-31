@@ -1,3 +1,5 @@
+""" Copyright 2016 Michael James Martinez
+"""
 
 import numpy as np
 

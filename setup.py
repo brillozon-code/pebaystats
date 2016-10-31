@@ -1,3 +1,5 @@
+""" Copyright 2016 Michael James Martinez
+"""
 
 from setuptools import setup
 
@@ -11,7 +13,7 @@ setup(name='pebaystats',
       url='http://github.com/brillozon-code/pebaystats',
       author='brillozon',
       author_email='brillozon@gmail.com',
-      license='MIT',
+      license='Apache License 2.0',
       packages=['pebaystats'],
       install_requires=[
         'numpy'
