@@ -12,14 +12,14 @@ class pebaystats(object):
         moments    -- list of current moment values
     """
 
-    def __init__(self,max_moment=4,width=1)
+    def __init__(self,max_moment=4,width=1):
         """return a new descriptive statistics accumulator
         """
         self.n       = 0
         self.depth   = max_moment
         self.moments = np.zeros((1+max_moment,width),dtype=np.float64)
 
-    def n(self,new_n=None)
+    def n(self,new_n=None):
         """access and possibly modify the number of elements in the
            aggregated statistics
         """
