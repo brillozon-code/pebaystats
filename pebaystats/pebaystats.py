@@ -1,4 +1,4 @@
-""" Copyright 2016 Michael James Martinez
+"""low complexity descriptive statistics 
 """
 from __future__ import print_function
 

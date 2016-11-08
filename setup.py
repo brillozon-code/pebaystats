@@ -1,5 +1,3 @@
-""" Copyright 2016 Michael James Martinez
-"""
 
 from setuptools import setup
 
