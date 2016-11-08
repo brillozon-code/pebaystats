@@ -18,5 +18,7 @@ setup(name='pebaystats',
       install_requires=[
         'numpy'
       ],
+      test_suite='nose.collector',
+      tests_require=['nose', 'nose-cover3'],
       zip_safe=False)
 
