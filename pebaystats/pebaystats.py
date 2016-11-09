@@ -3,6 +3,7 @@
 from __future__ import print_function
 
 import numpy as np
+from copy import deepcopy
 
 class pebaystats(object):
     """implement Pebay's reduced complexity descriptive statistical moments
@@ -96,6 +97,29 @@ class pebaystats(object):
         if self.depth == 4:
             return
 
+    def aggregate(self,rhs):
+        n_1 = self.n
+        n_2 = rhs.n
+        n_new = n_1 + n_2
+
+        mu_1 = self.moments[0]
+        mu_2 = rhs.moments[0]
+        delta_2_1 = mu_2 - mu_1
+
+        # M1 (moments[0]) -- x-bar (average)
+        mu_new = mu_1 + n_2 * delta_2_1 / n_new
+
+        # M2 (moments[1]) -- variance
+        m2_new = self.moments[1] + rhs.moments[1] + n_1 * n_2 * delta_2_1 * delta_2_1 / n_new
+
+        # Store the newly generated aggregation values into our storage.
+        self.n          = n_new
+        self.moments[0] = mu_new
+        self.moments[1] = m2_new
+
+        if(self.depth > 2):
+            raise BadAggregation
+
     def remove(self,value):
         """remove a value from the aggregated statistics
         """
@@ -105,18 +129,18 @@ class pebaystats(object):
         """generate and return the descriptive statistic of the current
            aggregation
         """
-        result = self.moments
+        result = deepcopy(self.moments)
         if self.depth <= 1:
             return(result)
 
         result[1] /= self.n
-        deviation = np.sqrt(result[1])
         if calculateDeviation:
-            result[1] = deviation
+            result[1] = np.sqrt(result[1])
         if self.depth == 2:
             return(result)
 
         # @TODO: handle heterogeneous deviations.
+        deviation = np.sqrt(result[1])
         if deviation.any() == 0:
             # @TODO: check that we don't need to explicitly set the
             #        higher moments to zero.
