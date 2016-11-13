@@ -61,11 +61,13 @@ author = u'Mike Martinez'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 
+import pebaystats
+
 import pkg_resources
 try:
         release = pkg_resources.get_distribution('pebaystats').version
 except pkg_resources.DistributionNotFound:
-        print 'To build the documentation, The distribution information of sandman'
+        print 'To build the documentation, The distribution information of pebaystats'
         print 'Has to be available.  Either install the package into your'
         print 'development environment or run "setup.py develop" to setup the'
         print 'metadata.  A virtualenv is recommended!'
