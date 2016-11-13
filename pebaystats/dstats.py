@@ -5,13 +5,13 @@ from __future__ import print_function
 import numpy as np
 from copy import deepcopy
 
-class pebaystats(object):
+class dstats(object):
     """implement Pebay's reduced complexity descriptive statistical moments
 
-    Attributes:
-        max_moment -- largest statistical moment to be calculated
-        n          -- number of elements over which moments are calculated
-        moments    -- list of current moment values
+    Members
+        :max_moment:  largest statistical moment to be calculated
+        :n:           number of elements over which moments are calculated
+        :moments:     list of current moment values
     """
 
     def __init__(self,max_moment=4,width=1):
@@ -20,27 +20,20 @@ class pebaystats(object):
         self.n       = np.int64(0)
         self.depth   = np.int32(max_moment)
         self.width   = np.int64(width)
-        self.moments = np.zeros((1+max_moment,width),dtype=np.float64)
-
-    def n(self,new_n=None):
-        """access and possibly modify the number of elements in the
-           aggregated statistics
-        """
-        if new_n is not None:
-            self.n = new_n
-        return self.n
+        self.moments = np.zeros((max_moment,width),dtype=np.float64)
 
     def add(self,value):
-        """add a new value to the aggregated statistics
+        """add a (single) new value to each column of the aggregated statistics
 
-            Arguments:
-                value - row of data values to aggregate.  This must be a
-                        Numpy array of values.
+            Arguments
+                :value: row of data values to aggregate (numpy array of values)
+
+        .. todo:: handle multiple rows for value
         """
 
         # Adjust the number of values in the data set.
         self.n += 1
-        size = self.n
+        size    = self.n
 
         # Check for the first value added to the data set.
         if self.depth == 0:
@@ -49,9 +42,6 @@ class pebaystats(object):
         # Get ready to calculate.
         delta        = value - self.moments[0]
         delta_over_n = delta / size
-        term2        = np.float64(0.0)
-        term3        = np.float64(0.0)
-        term4        = np.float64(0.0)
 
         if self.depth > 1:
             delta_delta_over_n = delta_over_n * delta
@@ -98,12 +88,19 @@ class pebaystats(object):
             return
 
     def aggregate(self,rhs):
-        n_1 = self.n
-        n_2 = rhs.n
+        """aggregate two dstat objects to hold the combined statistical moment values
+
+            Arguments
+                :rhs: the other accumulator object to be aggregated
+
+        .. todo:: aggregate moments higher than the second
+        """
+        n_1   = self.n
+        n_2   = rhs.n
         n_new = n_1 + n_2
 
-        mu_1 = self.moments[0]
-        mu_2 = rhs.moments[0]
+        mu_1  = self.moments[0]
+        mu_2  = rhs.moments[0]
         delta_2_1 = mu_2 - mu_1
 
         # M1 (moments[0]) -- x-bar (average)
@@ -122,12 +119,25 @@ class pebaystats(object):
 
     def remove(self,value):
         """remove a value from the aggregated statistics
+
+            Arguments
+                :value: value to be removed from the accumulated data elements
+
+        .. todo:: implement remove method
         """
         pass
 
     def statistics(self,calculateDeviation=False):
         """generate and return the descriptive statistic of the current
            aggregation
+
+            Arguments
+                :calculateDeviation: boolean flag that indicates whether the second
+                                     result is the variance or deviation
+
+            :return: array of the descriptive statistics (numpy array of float64)
+
+        ..  todo:: handle columns with some (not all) deviation values of 0
         """
         result = deepcopy(self.moments)
         if self.depth <= 1:
@@ -139,11 +149,13 @@ class pebaystats(object):
         if self.depth == 2:
             return(result)
 
-        # @TODO: handle heterogeneous deviations.
-        deviation = np.sqrt(result[1])
+        if calculateDeviation:
+            deviation = result[1]
+        else:
+            deviation = np.sqrt(result[1])
+
+        # Do not compute higher moments that would need a divide by zero.
         if deviation.any() == 0:
-            # @TODO: check that we don't need to explicitly set the
-            #        higher moments to zero.
             return(result)
 
         result[2] /= (self.n * deviation * deviation * deviation)

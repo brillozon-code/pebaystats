@@ -1,4 +1,8 @@
 .ipynb_checkpoints/
+_static/
+_templates/
+.eggs/
+.tox/
 *.pyc
 dist/
 build/
