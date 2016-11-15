@@ -11,3 +11,7 @@ History
 -------------------------------
 * Corrected some setup configuration issues
 
+0.3 (2016-11-14)
+-------------------------------
+* Added support and tests for serialization
+
