@@ -3,6 +3,7 @@ import unittest   as ut
 import nose.tools as nt
 
 import numpy as np
+import pickle
 
 import os, sys
 myPath = os.path.dirname(os.path.abspath(__file__))
@@ -139,4 +140,66 @@ class StatsTest(ut.TestCase):
         print('Expected mean: %11g, variance: %11g' %(final_mean,final_var))
         nt.assert_almost_equal(values[0], final_mean, places = 14)
         nt.assert_almost_equal(values[1],  final_var, places = 14)
+
+    def test_serdes(self):
+        ds = dstats(4,9)
+        dstr = pickle.dumps(ds)
+        nt.assert_greater(len(dstr),100)
+        print('\nserialized empty dstats to length: %s' % len(dstr))
+
+        ds2 = pickle.loads(dstr)
+        ds2_stats = ds2.statistics()
+        print('\nserialized statistics:\n %s' % ds2_stats)
+        discard = [ nt.assert_equals(ds2_stats[0][i],0)       for i in range(0,len(ds2_stats[0])) ]
+        discard = [ nt.assert_true(np.isnan(ds2_stats[i][j])) for i in range(1,ds2.depth) for j in range(0,ds2.width) ]
+
+        ds2.add([1,2,3,4,10,6,7,8,9])
+        ds2.add([9,8,7,6, 0,4,3,2,1])
+        ds2_stats = ds2.statistics()
+        print('\nserialized statistics:\n %s' % ds2_stats)
+        discard = [ nt.assert_equals(ds2_stats[0][i],5) for i in range(0,len(ds2_stats[0])) ]
+        discard = [ nt.assert_equals(ds2_stats[1][i],[16,9,4,1,25,1,4,9,16][i]) for i in range(0,len(ds2_stats[1])) ]
+        discard = [ nt.assert_equals(ds2_stats[2][i],0)  for i in range(0,len(ds2_stats[2])) ]
+        discard = [ nt.assert_equals(ds2_stats[3][i],-2) for i in range(0,len(ds2_stats[3])) ]
+
+        dstr2 = pickle.dumps(ds2)
+        nt.assert_greater(len(dstr2),100)
+        print('\nserialized empty dstats to length: %s' % len(dstr2))
+
+        ds3 = pickle.loads(dstr2)
+        ds3_stats = ds3.statistics()
+        print('\nserialized statistics:\n %s' % ds3_stats)
+        discard = [ nt.assert_equals(ds3_stats[0][i],5) for i in range(0,len(ds3_stats[0])) ]
+        discard = [ nt.assert_equals(ds3_stats[1][i],[16,9,4,1,25,1,4,9,16][i]) for i in range(0,len(ds3_stats[1])) ]
+        discard = [ nt.assert_equals(ds3_stats[2][i],0)  for i in range(0,len(ds3_stats[2])) ]
+        discard = [ nt.assert_equals(ds3_stats[3][i],-2) for i in range(0,len(ds3_stats[3])) ]
+
+    def test_state(self):
+        source = dstats(4,2)
+        state  = source.__get_state__()
+        source_stats = source.statistics()
+        print('source stats:\n%s' % source_stats)
+        discard = [ nt.assert_equals(source_stats[0][i],0) for i in range(0,len(source_stats[0])) ]
+        discard = [ nt.assert_true(np.isnan(source_stats[i][j]))
+                        for i in range(1,source.depth)
+                        for j in range(0,source.width) ]
+
+        dest = dstats(1,1)
+        dest.__set_state__(state)
+        dest_stats = dest.statistics()
+        print('dest stats:\n%s' % dest_stats)
+
+        source.add([1,2])
+        source.add([2,3])
+        source.add([3.4])
+        state = source.__get_state__()
+        source_stats = source.statistics()
+        print('source stats:\n%s' % source_stats)
+        dest.__set_state__(state)
+        dest_stats = dest.statistics()
+        print('dest stats:\n%s' % dest_stats)
+        discard = [ nt.assert_equals(source_stats[i][j],dest_stats[i][j])
+                        for i in range(0,source.depth)
+                        for j in range(0,source.width) ]
+
 

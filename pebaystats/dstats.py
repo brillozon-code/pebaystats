@@ -17,10 +17,35 @@ class dstats(object):
     def __init__(self,max_moment=4,width=1):
         """return a new descriptive statistics accumulator
         """
-        self.n       = np.int64(0)
-        self.depth   = np.int32(max_moment)
-        self.width   = np.int64(width)
+        self.n       = 0
+        self.depth   = max_moment
+        self.width   = width
         self.moments = np.zeros((max_moment,width),dtype=np.float64)
+
+    def __get_state__(self):
+        """support for serialization
+
+            :returns:  dictionary with internal state values
+        """
+        return {
+            "n":       self.n,
+            "moments": self.moments
+        }
+
+    def __set_state__(self,value):
+        """support for deserialization
+
+            Arguments
+                :value: new state to set into the instance
+        """
+        if value is None:
+            return
+        self.n       = value.get("n",0)
+        self.moments = value.get("moments",np.zeros((4,1),dtype=np.float64))
+
+        shp = self.moments.shape
+        self.depth = shp[0]
+        self.width = shp[1]
 
     def add(self,value):
         """add a (single) new value to each column of the aggregated statistics
@@ -95,6 +120,13 @@ class dstats(object):
 
         .. todo:: aggregate moments higher than the second
         """
+        if rhs.n is None or rhs.n == 0:
+            return
+        if self.n == 0:
+            self.n       = rhs.n
+            self.moments = rhs.moments
+            return
+
         n_1   = self.n
         n_2   = rhs.n
         n_new = n_1 + n_2
