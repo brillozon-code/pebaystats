@@ -22,6 +22,16 @@ class dstats(object):
         self.width   = width
         self.moments = np.zeros((max_moment,width),dtype=np.float64)
 
+    def __repr__(self):
+        shape = self.moments.shape
+        return("dstats(depth=%d,width=%d,n=%d)" % (
+                   shape[0],shape[1],self.n))
+
+    def __str__(self):
+        shape = self.moments.shape
+        return("dstats: %d moments, %d columns, %d rows" % (
+                   shape[0],shape[1],self.n))
+
     def __get_state__(self):
         """support for serialization
 
