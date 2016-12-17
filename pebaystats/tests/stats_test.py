@@ -5,12 +5,7 @@ import nose.tools as nt
 import numpy as np
 import pickle
 
-import os, sys
-myPath = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.abspath('.') + '/pebaystats/tests/')
-sys.path.insert(0, os.path.abspath('.') + '/tests/')
-sys.path.insert(0, os.path.abspath('.') + '/../')
-
+from context import pebaystats
 from pebaystats import dstats
 
 class StatsTest(ut.TestCase):
@@ -148,15 +143,19 @@ class StatsTest(ut.TestCase):
         print('\nserialized empty dstats to length: %s' % len(dstr))
 
         ds2 = pickle.loads(dstr)
+
+        # N.B. This call raises a RuntimeWarning when generating the
+        #      expected NaN values.
         ds2_stats = ds2.statistics()
-        print('\nserialized statistics:\n %s' % ds2_stats)
+        print('\ndeserialized empty ds2 statistics:\n %s' % ds2_stats)
+
         discard = [ nt.assert_equals(ds2_stats[0][i],0)       for i in range(0,len(ds2_stats[0])) ]
         discard = [ nt.assert_true(np.isnan(ds2_stats[i][j])) for i in range(1,ds2.depth) for j in range(0,ds2.width) ]
 
         ds2.add([1,2,3,4,10,6,7,8,9])
         ds2.add([9,8,7,6, 0,4,3,2,1])
         ds2_stats = ds2.statistics()
-        print('\nserialized statistics:\n %s' % ds2_stats)
+        print('\n2 element dstats statistics:\n %s' % ds2_stats)
         discard = [ nt.assert_equals(ds2_stats[0][i],5) for i in range(0,len(ds2_stats[0])) ]
         discard = [ nt.assert_equals(ds2_stats[1][i],[16,9,4,1,25,1,4,9,16][i]) for i in range(0,len(ds2_stats[1])) ]
         discard = [ nt.assert_equals(ds2_stats[2][i],0)  for i in range(0,len(ds2_stats[2])) ]
@@ -164,11 +163,11 @@ class StatsTest(ut.TestCase):
 
         dstr2 = pickle.dumps(ds2)
         nt.assert_greater(len(dstr2),100)
-        print('\nserialized empty dstats to length: %s' % len(dstr2))
+        print('\nserialized 2 element dstats to length: %s' % len(dstr2))
 
         ds3 = pickle.loads(dstr2)
         ds3_stats = ds3.statistics()
-        print('\nserialized statistics:\n %s' % ds3_stats)
+        print('\ndeserialized 2 element statistics:\n %s' % ds3_stats)
         discard = [ nt.assert_equals(ds3_stats[0][i],5) for i in range(0,len(ds3_stats[0])) ]
         discard = [ nt.assert_equals(ds3_stats[1][i],[16,9,4,1,25,1,4,9,16][i]) for i in range(0,len(ds3_stats[1])) ]
         discard = [ nt.assert_equals(ds3_stats[2][i],0)  for i in range(0,len(ds3_stats[2])) ]
