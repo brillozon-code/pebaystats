@@ -5,6 +5,16 @@ from __future__ import print_function
 import numpy as np
 from copy import deepcopy
 
+class BadAggregation(Exception):
+    """Unsupported aggregation attempt.
+    """
+
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value).replace("\\n", "\n")
+
 class dstats(object):
     """implement Pebay's reduced complexity descriptive statistical moments
 
@@ -18,19 +28,17 @@ class dstats(object):
         """return a new descriptive statistics accumulator
         """
         self.n       = 0
-        self.depth   = max_moment
-        self.width   = width
         self.moments = np.zeros((max_moment,width),dtype=np.float64)
 
     def __repr__(self):
         shape = self.moments.shape
-        return("dstats(depth=%d,width=%d,n=%d)" % (
-                   shape[0],shape[1],self.n))
+        return("dstats(n=%d,moments=\n%s)" % (
+                   self.n,self.moments))
 
     def __str__(self):
         shape = self.moments.shape
-        return("dstats: %d moments, %d columns, %d rows" % (
-                   shape[0],shape[1],self.n))
+        return("dstats: %d moments, %d columns, %d rows\n%s" % (
+                   shape[0],shape[1],self.n,self.moments))
 
     def __get_state__(self):
         """support for serialization
@@ -53,10 +61,6 @@ class dstats(object):
         self.n       = value.get("n",0)
         self.moments = value.get("moments",np.zeros((4,1),dtype=np.float64))
 
-        shp = self.moments.shape
-        self.depth = shp[0]
-        self.width = shp[1]
-
     def add(self,value):
         """add a (single) new value to each column of the aggregated statistics
 
@@ -71,20 +75,21 @@ class dstats(object):
         size    = self.n
 
         # Check for the first value added to the data set.
-        if self.depth == 0:
+        depth = self.moments.shape[0]
+        if depth == 0:
             return
 
         # Get ready to calculate.
         delta        = value - self.moments[0]
         delta_over_n = delta / size
 
-        if self.depth > 1:
+        if depth > 1:
             delta_delta_over_n = delta_over_n * delta
 
             # M2
             term2 = delta_delta_over_n * (size - 1.0)
 
-            if self.depth > 2:
+            if depth > 2:
                 M2 = self.moments[1]
                 delta_delta_delta_over_n_n = delta_delta_over_n * delta_over_n
 
@@ -93,7 +98,7 @@ class dstats(object):
                             * (size - 1.0) * (size - 2.0)
                             - 3.0 * delta_over_n * M2)
 
-                if self.depth > 3:
+                if depth > 3:
                     M3 = self.moments[2]
 
                     # M4
@@ -104,22 +109,22 @@ class dstats(object):
 
         # M1
         self.moments[0] += delta_over_n
-        if self.depth == 1:
+        if depth == 1:
             return
 
         # M2
         self.moments[1] += term2
-        if self.depth == 2:
+        if depth == 2:
             return
 
         # M3
         self.moments[2] += term3
-        if self.depth == 3:
+        if depth == 3:
             return
 
         # M4
         self.moments[3] += term4
-        if self.depth == 4:
+        if depth == 4:
             return
 
     def aggregate(self,rhs):
@@ -156,8 +161,10 @@ class dstats(object):
         self.moments[0] = mu_new
         self.moments[1] = m2_new
 
-        if(self.depth > 2):
-            raise BadAggregation
+        # Supported depth check.
+        # @TODO: support all depths
+        if(self.moments.shape[0] > 2):
+            raise BadAggregation('unsupported moments %d > 2' % self.moments.shape[0])
 
     def remove(self,value):
         """remove a value from the aggregated statistics
@@ -182,13 +189,17 @@ class dstats(object):
         ..  todo:: handle columns with some (not all) deviation values of 0
         """
         result = deepcopy(self.moments)
-        if self.depth <= 1:
+        depth  = self.moments.shape[0]
+        if depth <= 1:
+            return(result)
+
+        if self.n == 0:
             return(result)
 
         result[1] /= self.n
         if calculateDeviation:
             result[1] = np.sqrt(result[1])
-        if self.depth == 2:
+        if depth == 2:
             return(result)
 
         if calculateDeviation:
@@ -196,15 +207,14 @@ class dstats(object):
         else:
             deviation = np.sqrt(result[1])
 
-        # Do not compute higher moments that would need a divide by zero.
-        if deviation.any() == 0:
+        mask = (self.moments[1] != 0)
+        result[2][ mask] /= (self.n * deviation * deviation * deviation)
+        result[2][~mask]  = np.nan
+        if depth == 3:
             return(result)
 
-        result[2] /= (self.n * deviation * deviation * deviation)
-        if self.depth == 3:
-            return(result)
-
-        result[3] *= self.n / (self.moments[1] * self.moments[1])
+        result[3][ mask] *= self.n / (self.moments[1] * self.moments[1])
+        result[3][~mask]  = np.nan
         result[3] -= 3.0
 
         return(result)
