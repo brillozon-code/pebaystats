@@ -51,6 +51,48 @@ class StatsTest(ut.TestCase):
         nt.assert_almost_equal(stats[3,1], -2, places = 14)
         nt.assert_almost_equal(stats[3,2], -2, places = 14)
 
+    def test_no_variance_stats(self):
+        print('\n\n  *** test_no_variance_stats ***\n')
+        depth = 4
+        cols  = 3
+        pstats = dstats(depth,cols)
+
+        pstats.add(np.array([10,20,30]))
+        pstats.add(np.array([10,20,30]))
+        pstats.add(np.array([10,20,30]))
+        pstats.add(np.array([10,20,30]))
+        pstats.add(np.array([10,20,30]))
+        pstats.add(np.array([20,20,60]))
+        pstats.add(np.array([20,20,60]))
+        pstats.add(np.array([20,20,60]))
+        pstats.add(np.array([20,20,60]))
+        pstats.add(np.array([20,20,60]))
+
+        stats = pstats.statistics(True)
+        for moment in range(0,depth):
+            for col in range(0,cols):
+                print('col: %d, moment: %d, value: %22.15g' %
+                      (col,moment+1,stats[moment,col]))
+
+        nt.assert_equal(stats.shape[0], depth)
+        nt.assert_equal(stats.shape[1], cols)
+
+        nt.assert_almost_equal(stats[0,0], 15, places = 14)
+        nt.assert_almost_equal(stats[0,1], 20, places = 14)
+        nt.assert_almost_equal(stats[0,2], 45, places = 14)
+
+        nt.assert_almost_equal(stats[1,0],  5, places = 14)
+        nt.assert_almost_equal(stats[1,1],  0, places = 14)
+        nt.assert_almost_equal(stats[1,2], 15, places = 14)
+
+        nt.assert_almost_equal(stats[2,0],  1.27105748646260e-15, places = 14)
+        nt.assert_true(np.isnan(stats[2,1]))
+        nt.assert_almost_equal(stats[2,2], -1.56553681485797e-15, places = 14)
+
+        nt.assert_almost_equal(stats[3,0], -2, places = 14)
+        nt.assert_true(np.isnan(stats[3,1]))
+        nt.assert_almost_equal(stats[3,2], -2, places = 14)
+
     def test_aggregation_all(self):
         print('\n\n  *** test_aggregation_all ***\n')
         depth = 2
@@ -155,8 +197,6 @@ class StatsTest(ut.TestCase):
         ds2_stats = ds2.statistics()
         print('\ndeserialized empty ds2 statistics:\n %s' % ds2_stats)
 
-        # discard = [ nt.assert_equals(ds2_stats[0][i],0)       for i in range(0,len(ds2_stats[0])) ]
-        # discard = [ nt.assert_true(np.isnan(ds2_stats[i][j])) for i in range(0,depth) for j in range(0,width) ]
         discard = [ nt.assert_equals(ds2_stats[i][j],0) for i in range(0,depth) for j in range(0,width) ]
 
         ds2.add([1,2,3,4,10,6,7,8,9])
@@ -188,10 +228,6 @@ class StatsTest(ut.TestCase):
         state  = source.__get_state__()
         source_stats = source.statistics()
         print('source stats:\n%s' % source_stats)
-        # discard = [ nt.assert_equals(source_stats[0][i],0) for i in range(0,len(source_stats[0])) ]
-        # discard = [ nt.assert_true(np.isnan(source_stats[i][j]))
-        #                 for i in range(1,depth)
-        #                 for j in range(0,width) ]
         discard = [ nt.assert_equals(source_stats[i][j],0)
                         for i in range(0,depth)
                         for j in range(0,width) ]

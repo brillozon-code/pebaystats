@@ -185,8 +185,6 @@ class dstats(object):
                                      result is the variance or deviation
 
             :return: array of the descriptive statistics (numpy array of float64)
-
-        ..  todo:: handle columns with some (not all) deviation values of 0
         """
         result = deepcopy(self.moments)
         depth  = self.moments.shape[0]
@@ -208,12 +206,14 @@ class dstats(object):
             deviation = np.sqrt(result[1])
 
         mask = (self.moments[1] != 0)
-        result[2][ mask] /= (self.n * deviation * deviation * deviation)
+        maskedDeviation = deviation[mask]
+        result[2][ mask] /= (self.n * maskedDeviation * maskedDeviation * maskedDeviation)
         result[2][~mask]  = np.nan
         if depth == 3:
             return(result)
 
-        result[3][ mask] *= self.n / (self.moments[1] * self.moments[1])
+        maskedNvar = self.moments[1][mask]
+        result[3][ mask] *= self.n / (maskedNvar * maskedNvar)
         result[3][~mask]  = np.nan
         result[3] -= 3.0
 
