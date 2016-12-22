@@ -10,6 +10,7 @@ from pebaystats import dstats
 
 class StatsTest(ut.TestCase):
     def test_small_all(self):
+        print('\n\n  *** test_small_all ***\n')
         depth = 4
         cols  = 3
         pstats = dstats(depth,cols)
@@ -51,6 +52,7 @@ class StatsTest(ut.TestCase):
         nt.assert_almost_equal(stats[3,2], -2, places = 14)
 
     def test_aggregation_all(self):
+        print('\n\n  *** test_aggregation_all ***\n')
         depth = 2
         cols  = 3
         lhs = dstats(depth,cols)
@@ -89,6 +91,7 @@ class StatsTest(ut.TestCase):
         nt.assert_almost_equal(stats[1,2], 15, places = 14)
 
     def test_aggregation_large(self):
+        print('\n\n  *** test_aggregation_large ***\n')
         np.random.seed(0)
 
         ### Random data size
@@ -137,20 +140,24 @@ class StatsTest(ut.TestCase):
         nt.assert_almost_equal(values[1],  final_var, places = 14)
 
     def test_serdes(self):
+        print('\n\n  *** test_serdes ***\n')
         ds = dstats(4,9)
         dstr = pickle.dumps(ds)
         nt.assert_greater(len(dstr),100)
         print('\nserialized empty dstats to length: %s' % len(dstr))
 
         ds2 = pickle.loads(dstr)
+        depth = ds2.moments.shape[0]
+        width = ds2.moments.shape[1]
 
         # N.B. This call raises a RuntimeWarning when generating the
         #      expected NaN values.
         ds2_stats = ds2.statistics()
         print('\ndeserialized empty ds2 statistics:\n %s' % ds2_stats)
 
-        discard = [ nt.assert_equals(ds2_stats[0][i],0)       for i in range(0,len(ds2_stats[0])) ]
-        discard = [ nt.assert_true(np.isnan(ds2_stats[i][j])) for i in range(1,ds2.depth) for j in range(0,ds2.width) ]
+        # discard = [ nt.assert_equals(ds2_stats[0][i],0)       for i in range(0,len(ds2_stats[0])) ]
+        # discard = [ nt.assert_true(np.isnan(ds2_stats[i][j])) for i in range(0,depth) for j in range(0,width) ]
+        discard = [ nt.assert_equals(ds2_stats[i][j],0) for i in range(0,depth) for j in range(0,width) ]
 
         ds2.add([1,2,3,4,10,6,7,8,9])
         ds2.add([9,8,7,6, 0,4,3,2,1])
@@ -174,14 +181,20 @@ class StatsTest(ut.TestCase):
         discard = [ nt.assert_equals(ds3_stats[3][i],-2) for i in range(0,len(ds3_stats[3])) ]
 
     def test_state(self):
+        print('\n\n  *** test_state ***\n')
         source = dstats(4,2)
+        depth  = source.moments.shape[0]
+        width  = source.moments.shape[1]
         state  = source.__get_state__()
         source_stats = source.statistics()
         print('source stats:\n%s' % source_stats)
-        discard = [ nt.assert_equals(source_stats[0][i],0) for i in range(0,len(source_stats[0])) ]
-        discard = [ nt.assert_true(np.isnan(source_stats[i][j]))
-                        for i in range(1,source.depth)
-                        for j in range(0,source.width) ]
+        # discard = [ nt.assert_equals(source_stats[0][i],0) for i in range(0,len(source_stats[0])) ]
+        # discard = [ nt.assert_true(np.isnan(source_stats[i][j]))
+        #                 for i in range(1,depth)
+        #                 for j in range(0,width) ]
+        discard = [ nt.assert_equals(source_stats[i][j],0)
+                        for i in range(0,depth)
+                        for j in range(0,width) ]
 
         dest = dstats(1,1)
         dest.__set_state__(state)
@@ -198,7 +211,7 @@ class StatsTest(ut.TestCase):
         dest_stats = dest.statistics()
         print('dest stats:\n%s' % dest_stats)
         discard = [ nt.assert_equals(source_stats[i][j],dest_stats[i][j])
-                        for i in range(0,source.depth)
-                        for j in range(0,source.width) ]
+                        for i in range(0,depth)
+                        for j in range(0,width) ]
 
 
