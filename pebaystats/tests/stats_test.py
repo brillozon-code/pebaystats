@@ -182,17 +182,7 @@ class StatsTest(ut.TestCase):
         final_mean = np.mean(test_arr)
         final_var  = np.var(test_arr)
         final_skew = stats.skew(test_arr,axis=None,bias=True)
-        final_kurt = stats.kurtosis(test_arr,axis=None,fisher=True,bias=True)
-
-        ourstats = dstats(depth,width)
-        discard = [ ourstats.add(test_arr[i,j])
-                    for j in range(0,cols)
-                    for i in range(0,rows)]
-        ourvalues = ourstats.statistics()
-        our_mean = ourvalues[0]
-        our_var  = ourvalues[1]
-        our_skew = ourvalues[2]
-        our_kurt = ourvalues[3]
+        final_kurt = stats.kurtosis(test_arr,axis=None,fisher=True,bias=False)
 
         ### Create an object for each row and accumulate the data in that row
         statsobjects = [ dstats(depth,width) for i in range(0,rows) ]
@@ -216,19 +206,6 @@ class StatsTest(ut.TestCase):
         diag_skew = stats.skew(test_arr[1:3,],axis=None,bias=True)
         diag_kurt = stats.kurtosis(test_arr[1:3,],axis=None,fisher=True,bias=True)
 
-        diagstats = dstats()
-        diagstats.__set_state__(deepcopy(statsobjects[1].__get_state__()))
-        print('*** o1 state:\n%s,\n*** ds state:\n%s' % (statsobjects[1].__get_state__(),diagstats.__get_state__()))
-        diagstats.aggregate(statsobjects[2])
-        print('*** o2 state:\n%s,\n*** ds state:\n%s' % (statsobjects[2].__get_state__(),diagstats.__get_state__()))
-        values = diagstats.statistics()
-        
-        print('*** o1 state:\n%s,\n*** ds state:\n%s' % (statsobjects[1].__get_state__(),diagstats.__get_state__()))
-        print('\nDiagnostic Results\n')
-        print('lhs:\n%s,\nrhs:\n%s,\nresult:\n%s' % (statsobjects[1],statsobjects[2],diagstats))
-        print('Result   mean: %11g, variance: %11g, skew: %11g, kurtosis: %11g' % (values[0],values[1],values[2],values[3]))
-        print('Expected mean: %11g, variance: %11g, skew: %11g, kurtosis: %11g' % (diag_mean,diag_var,diag_skew,diag_kurt))
-
         ### Aggregate result into the index 0 accumulator
         discard = [ statsobjects[0].aggregate(statsobjects[i]) for i in range(1,rows) ]
 
@@ -236,11 +213,11 @@ class StatsTest(ut.TestCase):
         print('\nAggregated Results\n')
         print('Result    mean: %11g, variance: %11g, skew: %11g, kurtosis: %11g' % (values[0],values[1],values[2],values[3]))
         print('Expected  mean: %11g, variance: %11g, skew: %11g, kurtosis: %11g' % (final_mean,final_var,final_skew,final_kurt))
-        print('Generated mean: %11g, variance: %11g, skew: %11g, kurtosis: %11g' % (our_mean,our_var,our_skew,our_kurt))
         nt.assert_almost_equal(values[0], final_mean, places = 14)
         nt.assert_almost_equal(values[1],  final_var, places = 14)
         nt.assert_almost_equal(values[2], final_skew, places = 14)
-        # nt.assert_almost_equal(values[3], final_kurt, places = 14)
+        nt.assert_almost_equal(values[3], final_kurt, places =  5)
+        ## @TODO: Determine why the kurtosis accuracy is degraded.
 
     def test_serdes(self):
         print('\n\n  *** test_serdes ***\n')

@@ -142,7 +142,7 @@ class dstats(object):
             Arguments
                 :rhs: the other accumulator object to be aggregated
 
-        .. todo:: aggregate moments higher than the second
+        .. todo:: determine why the kurtosis accuracy is degraded for aggregation.
         """
         print('aggregating onto:\n%s\nwith:\n%s' % (self,rhs))
         if rhs.n is None or rhs.n == 0:
@@ -163,8 +163,6 @@ class dstats(object):
         # Update new value of M0.
         self.n = n_new
 
-        # mu_1  = deepcopy(self.moments[0])
-        # mu_2  = deepcopy(rhs.moments[0])
         mu_1  = self.moments[0]
         mu_2  = rhs.moments[0]
         delta_2_1 = mu_2 - mu_1
@@ -177,8 +175,6 @@ class dstats(object):
 
         # M2 (moments[1]) -- variance
         m2_1 = deepcopy(self.moments[1])
-        # m2_2 = deepcopy(rhs.moments[1])
-        # m2_1 = self.moments[1]
         m2_2 = rhs.moments[1]
         delta_2_1_up2 = delta_2_1 * delta_2_1
 
@@ -189,29 +185,19 @@ class dstats(object):
 
         # M3 (moments[2]) -- skew
         m3_1 = deepcopy(self.moments[2])
-        # m3_2 = deepcopy(rhs.moments[2])
-        # m3_1 = self.moments[2]
         m3_2 = rhs.moments[2]
         n_new_up2 = n_new * n_new
         n1_n2_n12 = n_1 * n_2 * (n_1 - n_2)
         delta_2_1_up3 = delta_2_1_up2 * delta_2_1
 
-        print('m3_1: %s, m3_2: %s, n1_n2_n12: %s, delta_2_1_up3: %s, n_new_up2: %s, n_1: %s, m2_2: %s, n_2: %s, m2_1: %s, delta_2_1: %s, n_new: %s' % (m3_1,m3_2,n1_n2_n12,delta_2_1_up3,n_new_up2,n_1,m2_2,n_2,m2_1,delta_2_1,n_new))
-
         self.moments[2] = m3_1 + m3_2 + \
             n1_n2_n12 * delta_2_1_up3 / n_new_up2 + \
             3 * (n_1 * m2_2 - n_2 * m2_1) * delta_2_1 / n_new
-
-        # self.moments[2] = m3_1 + m3_2 + \
-        #     n1_n2_n12 * delta_2_1_up3 / n_new_up2 + \
-        #     3 * (n_1 * m2_2 - n_2 * m2_1) * delta_2_1 / n_new
 
         if depth == 3:
             return
 
         # M4 (moments[3]) -- kurtosis
-        # m4_1 = deepcopy(self.moments[3])
-        # m4_2 = deepcopy(rhs.moments[3])
         m4_1 = self.moments[3]
         m4_2 = rhs.moments[3]
         delta_2_1_up4 = delta_2_1_up3 * delta_2_1
@@ -277,6 +263,9 @@ class dstats(object):
         result[3][ mask] *= self.n / (maskedNvar * maskedNvar)
         result[3][ mask] -= 3.0
         result[3][~mask]  = np.nan
+        if depth == 4:
+            return(result)
 
-        return(result)
+        # Supported depth exceeded.
+        raise ExcessiveMoments('unsupported moments %d > 4' % self.moments.shape[0])
 
