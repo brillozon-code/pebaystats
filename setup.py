@@ -34,6 +34,6 @@ setup(name='pebaystats',
       packages=['pebaystats'],
       install_requires=requirements,
       test_suite='nose.collector',
-      tests_require=['nose', 'nose-cover3'],
+      tests_require=['nose', 'nose-cover3', 'scipy'],
       zip_safe=False)
 
