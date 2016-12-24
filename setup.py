@@ -5,15 +5,19 @@ import pebaystats
 
 def readme():
     with open('README.rst') as f:
-        return f.read()
+        return(f.read())
 
 def history():
     with open('HISTORY.rst') as f:
-        return f.read()
+        return(f.read())
+
+def reqs():
+    with open('requirements.txt') as f:
+        return([ l.strip() for l in f.readlines() ])
 
 long_desc = readme() + '\n\n' + history().replace('.. :changelog:', '')
 
-requirements = [ l.strip() for l in open('requirements.txt').readlines() ]
+requirements = reqs()
 
 setup(name='pebaystats',
       # version='0.1',
