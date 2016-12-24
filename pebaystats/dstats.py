@@ -144,7 +144,6 @@ class dstats(object):
 
         .. todo:: determine why the kurtosis accuracy is degraded for aggregation.
         """
-        print('aggregating onto:\n%s\nwith:\n%s' % (self,rhs))
         if rhs.n is None or rhs.n == 0:
             return
         if self.n == 0:
