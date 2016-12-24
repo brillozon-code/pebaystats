@@ -4,6 +4,8 @@ import nose.tools as nt
 
 import numpy as np
 import pickle
+from scipy import stats
+from copy  import deepcopy
 
 from context import pebaystats
 from pebaystats import dstats
@@ -95,7 +97,7 @@ class StatsTest(ut.TestCase):
 
     def test_aggregation_all(self):
         print('\n\n  *** test_aggregation_all ***\n')
-        depth = 2
+        depth = 4
         cols  = 3
         lhs = dstats(depth,cols)
         lhs.add(np.array([10,20,30]))
@@ -105,7 +107,7 @@ class StatsTest(ut.TestCase):
         lhs.add(np.array([10,20,30]))
         print('lhs is: %s' % lhs.statistics(True))
 
-        rhs = dstats(2,3)
+        rhs = dstats(depth,cols)
         rhs.add(np.array([20,40,60]))
         rhs.add(np.array([20,40,60]))
         rhs.add(np.array([20,40,60]))
@@ -121,6 +123,19 @@ class StatsTest(ut.TestCase):
                 print('col: %d, moment: %d, value: %22.15g' %
                       (col,moment+1,stats[moment,col]))
 
+        full = dstats(depth,cols)
+        full.add(np.array([10,20,30]))
+        full.add(np.array([10,20,30]))
+        full.add(np.array([10,20,30]))
+        full.add(np.array([10,20,30]))
+        full.add(np.array([10,20,30]))
+        full.add(np.array([20,40,60]))
+        full.add(np.array([20,40,60]))
+        full.add(np.array([20,40,60]))
+        full.add(np.array([20,40,60]))
+        full.add(np.array([20,40,60]))
+        print('FULL is: %s' % full.statistics(True))
+
         nt.assert_equal(stats.shape[0], depth)
         nt.assert_equal(stats.shape[1], cols)
 
@@ -132,6 +147,14 @@ class StatsTest(ut.TestCase):
         nt.assert_almost_equal(stats[1,1], 10, places = 14)
         nt.assert_almost_equal(stats[1,2], 15, places = 14)
 
+        nt.assert_almost_equal(stats[2,0],  0, places = 14)
+        nt.assert_almost_equal(stats[2,1],  0, places = 14)
+        nt.assert_almost_equal(stats[2,2],  0, places = 14)
+
+        nt.assert_almost_equal(stats[3,0], -3, places = 14)
+        nt.assert_almost_equal(stats[3,1], -3, places = 14)
+        nt.assert_almost_equal(stats[3,2], -3, places = 14)
+
     def test_aggregation_large(self):
         print('\n\n  *** test_aggregation_large ***\n')
         np.random.seed(0)
@@ -141,7 +164,7 @@ class StatsTest(ut.TestCase):
         cols = 100
 
         ### Each accumulators size
-        depth = 2
+        depth = 4
         width = 1
 
         ### Test data -- 10 rows of 100 columns each
@@ -152,10 +175,24 @@ class StatsTest(ut.TestCase):
         ### Expected intermediate output
         mid_mean = np.mean(test_arr,axis = 1)
         mid_var  = np.var(test_arr, axis = 1)
+        mid_skew = stats.skew(test_arr, axis = 1, bias = True)
+        mid_kurt = stats.kurtosis(test_arr, axis = 1, bias = True)
 
         ### Expected final output
         final_mean = np.mean(test_arr)
         final_var  = np.var(test_arr)
+        final_skew = stats.skew(test_arr,axis=None,bias=True)
+        final_kurt = stats.kurtosis(test_arr,axis=None,fisher=True,bias=True)
+
+        ourstats = dstats(depth,width)
+        discard = [ ourstats.add(test_arr[i,j])
+                    for j in range(0,cols)
+                    for i in range(0,rows)]
+        ourvalues = ourstats.statistics()
+        our_mean = ourvalues[0]
+        our_var  = ourvalues[1]
+        our_skew = ourvalues[2]
+        our_kurt = ourvalues[3]
 
         ### Create an object for each row and accumulate the data in that row
         statsobjects = [ dstats(depth,width) for i in range(0,rows) ]
@@ -166,20 +203,44 @@ class StatsTest(ut.TestCase):
         print('\nIntermediate Results\n')
         for i in range(0,rows):
             values = statsobjects[i].statistics()
-            print('Result %d mean: %11g, variance: %11g (M2/N: %11g/%d)' %(i,values[0],values[1],statsobjects[i].moments[1],statsobjects[i].n))
-            print('Expected mean: %11g, variance: %11g' %(mid_mean[i],mid_var[i]))
+            print('Result %d mean: %11g, variance: %11g, skew: %11g, kurtosis: %11g' % (i,values[0],values[1],values[2],values[3]))
+            print('Expected mean: %11g, variance: %11g, skew: %11g, kurtosis: %11g' %(mid_mean[i],mid_var[i],mid_skew[i],mid_kurt[i]))
             nt.assert_almost_equal(values[0], mid_mean[i], places = 14)
             nt.assert_almost_equal(values[1],  mid_var[i], places = 14)
+            nt.assert_almost_equal(values[2], mid_skew[i], places = 14)
+            nt.assert_almost_equal(values[3], mid_kurt[i], places = 14)
+
+        ### Aggregate just a couple of intermediate results for diagnostic purposes.
+        diag_mean = np.mean(test_arr[1:3,],axis=None)
+        diag_var  = np.var(test_arr[1:3,],axis=None)
+        diag_skew = stats.skew(test_arr[1:3,],axis=None,bias=True)
+        diag_kurt = stats.kurtosis(test_arr[1:3,],axis=None,fisher=True,bias=True)
+
+        diagstats = dstats()
+        diagstats.__set_state__(deepcopy(statsobjects[1].__get_state__()))
+        print('*** o1 state:\n%s,\n*** ds state:\n%s' % (statsobjects[1].__get_state__(),diagstats.__get_state__()))
+        diagstats.aggregate(statsobjects[2])
+        print('*** o2 state:\n%s,\n*** ds state:\n%s' % (statsobjects[2].__get_state__(),diagstats.__get_state__()))
+        values = diagstats.statistics()
+        
+        print('*** o1 state:\n%s,\n*** ds state:\n%s' % (statsobjects[1].__get_state__(),diagstats.__get_state__()))
+        print('\nDiagnostic Results\n')
+        print('lhs:\n%s,\nrhs:\n%s,\nresult:\n%s' % (statsobjects[1],statsobjects[2],diagstats))
+        print('Result   mean: %11g, variance: %11g, skew: %11g, kurtosis: %11g' % (values[0],values[1],values[2],values[3]))
+        print('Expected mean: %11g, variance: %11g, skew: %11g, kurtosis: %11g' % (diag_mean,diag_var,diag_skew,diag_kurt))
 
         ### Aggregate result into the index 0 accumulator
         discard = [ statsobjects[0].aggregate(statsobjects[i]) for i in range(1,rows) ]
 
         values = statsobjects[0].statistics()
         print('\nAggregated Results\n')
-        print('Result   mean: %11g, variance: %11g' %(values[0],values[1]))
-        print('Expected mean: %11g, variance: %11g' %(final_mean,final_var))
+        print('Result    mean: %11g, variance: %11g, skew: %11g, kurtosis: %11g' % (values[0],values[1],values[2],values[3]))
+        print('Expected  mean: %11g, variance: %11g, skew: %11g, kurtosis: %11g' % (final_mean,final_var,final_skew,final_kurt))
+        print('Generated mean: %11g, variance: %11g, skew: %11g, kurtosis: %11g' % (our_mean,our_var,our_skew,our_kurt))
         nt.assert_almost_equal(values[0], final_mean, places = 14)
         nt.assert_almost_equal(values[1],  final_var, places = 14)
+        nt.assert_almost_equal(values[2], final_skew, places = 14)
+        # nt.assert_almost_equal(values[3], final_kurt, places = 14)
 
     def test_serdes(self):
         print('\n\n  *** test_serdes ***\n')

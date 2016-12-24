@@ -5,8 +5,8 @@ from __future__ import print_function
 import numpy as np
 from copy import deepcopy
 
-class BadAggregation(Exception):
-    """Unsupported aggregation attempt.
+class ExcessiveMoments(Exception):
+    """Unsupported moment generation attempt.
     """
 
     def __init__(self, value):
@@ -22,6 +22,9 @@ class dstats(object):
         :max_moment:  largest statistical moment to be calculated
         :n:           number of elements over which moments are calculated
         :moments:     list of current moment values
+
+    .. todo:: add covariance calculations
+    .. todo:: extend to general formulas
     """
 
     def __init__(self,max_moment=4,width=1):
@@ -74,10 +77,13 @@ class dstats(object):
         self.n += 1
         size    = self.n
 
-        # Check for the first value added to the data set.
-        depth = self.moments.shape[0]
-        if depth == 0:
+        # Allow empty moments to simply count data elements.
+        if self.moments.ndim == 0 or self.moments.shape[0] == 0:
             return
+
+        # How much to calculate.
+        shape = self.moments.shape
+        depth = shape[0]
 
         # Get ready to calculate.
         delta        = value - self.moments[0]
@@ -127,6 +133,9 @@ class dstats(object):
         if depth == 4:
             return
 
+        # Supported depth exceeded.
+        raise ExcessiveMoments('unsupported moments %d > 4' % self.moments.shape[0])
+
     def aggregate(self,rhs):
         """aggregate two dstat objects to hold the combined statistical moment values
 
@@ -135,6 +144,7 @@ class dstats(object):
 
         .. todo:: aggregate moments higher than the second
         """
+        print('aggregating onto:\n%s\nwith:\n%s' % (self,rhs))
         if rhs.n is None or rhs.n == 0:
             return
         if self.n == 0:
@@ -142,29 +152,80 @@ class dstats(object):
             self.moments = rhs.moments
             return
 
+        # How much to calculate.
+        shape = self.moments.shape
+        depth = shape[0]
+
         n_1   = self.n
         n_2   = rhs.n
         n_new = n_1 + n_2
 
+        # Update new value of M0.
+        self.n = n_new
+
+        # mu_1  = deepcopy(self.moments[0])
+        # mu_2  = deepcopy(rhs.moments[0])
         mu_1  = self.moments[0]
         mu_2  = rhs.moments[0]
         delta_2_1 = mu_2 - mu_1
 
         # M1 (moments[0]) -- x-bar (average)
-        mu_new = mu_1 + n_2 * delta_2_1 / n_new
+        self.moments[0] = mu_1 + n_2 * delta_2_1 / n_new
+
+        if depth == 1:
+            return
 
         # M2 (moments[1]) -- variance
-        m2_new = self.moments[1] + rhs.moments[1] + n_1 * n_2 * delta_2_1 * delta_2_1 / n_new
+        m2_1 = deepcopy(self.moments[1])
+        # m2_2 = deepcopy(rhs.moments[1])
+        # m2_1 = self.moments[1]
+        m2_2 = rhs.moments[1]
+        delta_2_1_up2 = delta_2_1 * delta_2_1
 
-        # Store the newly generated aggregation values into our storage.
-        self.n          = n_new
-        self.moments[0] = mu_new
-        self.moments[1] = m2_new
+        self.moments[1] = m2_1 + m2_2 + n_1 * n_2 * delta_2_1_up2 / n_new
 
-        # Supported depth check.
-        # @TODO: support all depths
-        if(self.moments.shape[0] > 2):
-            raise BadAggregation('unsupported moments %d > 2' % self.moments.shape[0])
+        if depth == 2:
+            return
+
+        # M3 (moments[2]) -- skew
+        m3_1 = deepcopy(self.moments[2])
+        # m3_2 = deepcopy(rhs.moments[2])
+        # m3_1 = self.moments[2]
+        m3_2 = rhs.moments[2]
+        n_new_up2 = n_new * n_new
+        n1_n2_n12 = n_1 * n_2 * (n_1 - n_2)
+        delta_2_1_up3 = delta_2_1_up2 * delta_2_1
+
+        print('m3_1: %s, m3_2: %s, n1_n2_n12: %s, delta_2_1_up3: %s, n_new_up2: %s, n_1: %s, m2_2: %s, n_2: %s, m2_1: %s, delta_2_1: %s, n_new: %s' % (m3_1,m3_2,n1_n2_n12,delta_2_1_up3,n_new_up2,n_1,m2_2,n_2,m2_1,delta_2_1,n_new))
+
+        self.moments[2] = m3_1 + m3_2 + \
+            n1_n2_n12 * delta_2_1_up3 / n_new_up2 + \
+            3 * (n_1 * m2_2 - n_2 * m2_1) * delta_2_1 / n_new
+
+        # self.moments[2] = m3_1 + m3_2 + \
+        #     n1_n2_n12 * delta_2_1_up3 / n_new_up2 + \
+        #     3 * (n_1 * m2_2 - n_2 * m2_1) * delta_2_1 / n_new
+
+        if depth == 3:
+            return
+
+        # M4 (moments[3]) -- kurtosis
+        # m4_1 = deepcopy(self.moments[3])
+        # m4_2 = deepcopy(rhs.moments[3])
+        m4_1 = self.moments[3]
+        m4_2 = rhs.moments[3]
+        delta_2_1_up4 = delta_2_1_up3 * delta_2_1
+
+        self.moments[3] = m4_1 + m4_2 + \
+            n1_n2_n12 * (n_1 - n_2) * delta_2_1_up4 / (n_new_up2 * n_new) + \
+            6 * (n_1 * n_1 * m2_2 + n_2 * n_2 * m2_1) * delta_2_1_up2 / n_new_up2 + \
+            4 * (n_1 * m3_2 - n_2 * m3_1) * delta_2_1 / n_new
+
+        if depth == 4:
+            return
+
+        # Supported depth exceeded.
+        raise ExcessiveMoments('unsupported moments %d > 4' % self.moments.shape[0])
 
     def remove(self,value):
         """remove a value from the aggregated statistics
@@ -214,8 +275,8 @@ class dstats(object):
 
         maskedNvar = self.moments[1][mask]
         result[3][ mask] *= self.n / (maskedNvar * maskedNvar)
+        result[3][ mask] -= 3.0
         result[3][~mask]  = np.nan
-        result[3] -= 3.0
 
         return(result)
 
