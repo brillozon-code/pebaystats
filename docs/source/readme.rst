@@ -1,1 +1,5 @@
-.. include:: ../../README.rst
+
+.. include:: ./intro.rst
+
+.. include:: ./quickstart.rst
+

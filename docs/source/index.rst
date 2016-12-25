@@ -3,8 +3,11 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-pebaystats - single pass descriptive statistical moments
-========================================================
+==========
+pebaystats
+==========
+
+.. automodule:: pebaystats
 
 Contents:
 
@@ -12,17 +15,13 @@ Contents:
    :maxdepth: 2
 
    readme
+   package
    installation
    usage
    authors
    history
 
-.. automodule:: pebaystats
-
-.. autoclass:: dstats
-    :members:
-
-
+==================
 Indices and tables
 ==================
 
