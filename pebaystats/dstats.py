@@ -15,6 +15,16 @@ class ExcessiveMoments(Exception):
     def __str__(self):
         return repr(self.value).replace("\\n", "\n")
 
+class UnsupportedMethod(Exception):
+    """Unsupported method.
+    """
+
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value).replace("\\n", "\n")
+
 class dstats(object):
     """implement Pebay's reduced complexity descriptive statistical moments
 
@@ -220,7 +230,7 @@ class dstats(object):
 
         .. todo:: implement remove method
         """
-        pass
+        raise UnsupportedMethod('Method remove() is not implemented')
 
     def statistics(self,calculateDeviation=False):
         """generate and return the descriptive statistic of the current
